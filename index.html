@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PanelSnap — Permit-Ready Panel Diagrams in 60 Seconds</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0a0a0a;
+      --panel: #111418;
+      --steel: #1c2128;
+      --wire: #f5a623;
+      --wire-dim: #c47d0e;
+      --white: #f0ede8;
+      --muted: #8a8a8a;
+      --green: #2ecc71;
+      --danger: #e74c3c;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      background: rgba(10,10,10,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(245,166,35,0.12);
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      letter-spacing: 0.08em;
+      color: var(--wire);
+    }
+
+    .logo span { color: var(--white); }
+
+    nav a {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+
+    nav a:hover { color: var(--wire); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 24px 80px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(245,166,35,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,166,35,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent);
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(245,166,35,0.08) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(245,166,35,0.1);
+      border: 1px solid rgba(245,166,35,0.25);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--wire);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      position: relative;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--wire);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3.5rem, 10vw, 8rem);
+      line-height: 0.92;
+      letter-spacing: 0.02em;
+      color: var(--white);
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    h1 .accent { color: var(--wire); }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.6;
+      margin-bottom: 48px;
+      font-weight: 300;
+      position: relative;
+    }
+
+    /* ── WAITLIST FORM ── */
+    .waitlist-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .input-row {
+      display: flex;
+      width: 100%;
+      gap: 0;
+      border: 1.5px solid rgba(245,166,35,0.3);
+      border-radius: 4px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .input-row:focus-within {
+      border-color: var(--wire);
+    }
+
+    .input-row input {
+      flex: 1;
+      background: rgba(28,33,40,0.9);
+      border: none;
+      outline: none;
+      padding: 16px 20px;
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .input-row input::placeholder { color: #555; }
+
+    .input-row button {
+      background: var(--wire);
+      border: none;
+      padding: 16px 24px;
+      color: var(--black);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .input-row button:hover { background: var(--wire-dim); }
+
+    .waitlist-note {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    .waitlist-note strong { color: var(--wire); }
+
+    .success-msg {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: rgba(46,204,113,0.1);
+      border: 1px solid rgba(46,204,113,0.3);
+      border-radius: 4px;
+      padding: 14px 20px;
+      color: var(--green);
+      font-size: 0.9rem;
+      font-weight: 500;
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      padding: 32px 24px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: var(--panel);
+      overflow-x: auto;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 40px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .stat:last-child { border-right: none; }
+
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.4rem;
+      color: var(--wire);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    /* ── PROBLEM SECTION ── */
+    section {
+      position: relative;
+      padding: 100px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--wire);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-label::after {
+      content: '';
+      display: block;
+      height: 1px;
+      width: 40px;
+      background: var(--wire);
+      opacity: 0.4;
+    }
+
+    h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      margin-bottom: 16px;
+    }
+
+    .section-intro {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+      margin-bottom: 56px;
+      font-weight: 300;
+    }
+
+    /* ── PROBLEM CARDS ── */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2px;
+    }
+
+    .problem-card {
+      background: var(--panel);
+      padding: 36px 32px;
+      border: 1px solid rgba(255,255,255,0.05);
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .problem-card:hover {
+      border-color: rgba(245,166,35,0.2);
+    }
+
+    .problem-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px;
+      height: 0;
+      background: var(--wire);
+      transition: height 0.3s;
+    }
+
+    .problem-card:hover::before { height: 100%; }
+
+    .problem-icon {
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .problem-card h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+      color: var(--white);
+    }
+
+    .problem-card p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how-section {
+      background: var(--panel);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding: 100px 24px;
+    }
+
+    .how-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2px;
+      margin-top: 56px;
+    }
+
+    .step {
+      padding: 40px 36px;
+      background: var(--steel);
+      border: 1px solid rgba(255,255,255,0.05);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 5rem;
+      color: rgba(245,166,35,0.08);
+      line-height: 1;
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .step-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(245,166,35,0.1);
+      border: 1px solid rgba(245,166,35,0.2);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 24px;
+    }
+
+    .step h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+    }
+
+    .step p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.75;
+      font-weight: 300;
+    }
+
+    .step-connector {
+      display: none;
+    }
+
+    /* ── PANEL MOCKUP ── */
+    .mockup-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 100px 24px;
+    }
+
+    .panel-mockup {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 40px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel-mockup::before {
+      content: 'PANELSNAP OUTPUT // JOB #2847 // 127 OAK ST';
+      display: block;
+      color: var(--wire);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(245,166,35,0.15);
+    }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .breaker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--steel);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 2px;
+      transition: border-color 0.2s;
+    }
+
+    .breaker:hover { border-color: rgba(245,166,35,0.2); }
+
+    .breaker-pos {
+      font-size: 0.65rem;
+      color: var(--muted);
+      min-width: 20px;
+    }
+
+    .breaker-amp {
+      background: rgba(245,166,35,0.15);
+      color: var(--wire);
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 2px;
+      min-width: 36px;
+      text-align: center;
+    }
+
+    .breaker-amp.amp-main {
+      background: rgba(231,76,60,0.15);
+      color: var(--danger);
+    }
+
+    .breaker-amp.amp-double {
+      background: rgba(52,152,219,0.15);
+      color: #3498db;
+    }
+
+    .breaker-label {
+      font-size: 0.75rem;
+      color: var(--white);
+      flex: 1;
+    }
+
+    .breaker-status {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .panel-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: gap;
+      gap: 12px;
+    }
+
+    .panel-meta {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    .export-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--wire);
+      color: var(--black);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+      padding: 10px 20px;
+      border-radius: 2px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* ── FINAL CTA ── */
+    .cta-section {
+      background: var(--panel);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 100px 24px;
+      text-align: center;
+    }
+
+    .cta-inner {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .cta-section h2 {
+      font-size: clamp(2.4rem, 6vw, 4.5rem);
+      margin-bottom: 20px;
+    }
+
+    .cta-section p {
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 40px;
+      font-weight: 300;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 32px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    footer p {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    footer a {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    footer a:hover { color: var(--wire); }
+
+    /* ── ANIMATIONS ── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      nav { padding: 16px 20px; }
+      .stat { padding: 0 20px; }
+      .stat-num { font-size: 1.8rem; }
+      .panel-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo">Panel<span>Snap</span></div>
+    <a href="#waitlist">Join Waitlist</a>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Now in early access
+    </div>
+
+    <h1>
+      Photograph<br>
+      a panel.<br>
+      <span class="accent">Done.</span>
+    </h1>
+
+    <p class="hero-sub">
+      PanelSnap turns a job site photo into a fully labeled circuit diagram and permit-ready PDF in under 60 seconds. No manual entry. No guesswork.
+    </p>
+
+    <div class="waitlist-wrap" id="waitlist">
+      <div class="input-row">
+        <input type="email" id="email-input" placeholder="your@email.com" autocomplete="email" />
+        <button onclick="handleSignup()">Join Waitlist</button>
+      </div>
+      <div class="success-msg" id="success-msg">
+        <span>✓</span> You're on the list. First 100 get 3 months free.
+      </div>
+      <p class="waitlist-note">First <strong>100 electricians</strong> get 3 months free. No credit card required.</p>
+    </div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-num">90<span style="font-size:1.4rem">min</span></span>
+      <span class="stat-label">Avg. time spent on panel docs per job</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">60<span style="font-size:1.4rem">sec</span></span>
+      <span class="stat-label">With PanelSnap</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">1<span style="font-size:1.4rem">tap</span></span>
+      <span class="stat-label">To export permit-ready PDF</span>
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section>
+    <div class="section-label">The Problem</div>
+    <h2>Documentation is killing <br>your billable hours</h2>
+    <p class="section-intro">
+      Every job ends the same way. The real work is done, but you're still on site filling out labels, sketching diagrams, and hoping the inspector accepts what you hand them.
+    </p>
+
+    <div class="problem-grid">
+      <div class="problem-card fade-up">
+        <span class="problem-icon">⏱</span>
+        <h3>It eats your time</h3>
+        <p>Manual panel documentation takes 45 to 90 minutes per job. That's time you're not billing, and time you're not home.</p>
+      </div>
+      <div class="problem-card fade-up">
+        <span class="problem-icon">📋</span>
+        <h3>Permits get rejected</h3>
+        <p>Inspectors reject hand-drawn or inconsistently labeled diagrams. One rejection means a callback, a delay, and money out of your pocket.</p>
+      </div>
+      <div class="problem-card fade-up">
+        <span class="problem-icon">🤝</span>
+        <h3>Handoffs fall apart</h3>
+        <p>When you pass a job to another electrician or a GC, critical circuit info gets lost in a photo on someone's phone. That's how mistakes happen.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <div class="how-section">
+    <div class="how-inner">
+      <div class="section-label">How It Works</div>
+      <h2>Three steps.<br>Under a minute.</h2>
+
+      <div class="steps">
+        <div class="step fade-up">
+          <div class="step-num">01</div>
+          <div class="step-icon">📸</div>
+          <h3>Photograph the panel</h3>
+          <p>Open PanelSnap on your phone and point it at the panel. The app guides you to frame the shot correctly. Takes about 10 seconds.</p>
+        </div>
+        <div class="step fade-up">
+          <div class="step-num">02</div>
+          <div class="step-icon">🤖</div>
+          <h3>AI reads every breaker</h3>
+          <p>Computer vision detects each breaker's position and amperage. The AI reads and standardizes every label, including handwritten ones.</p>
+        </div>
+        <div class="step fade-up">
+          <div class="step-num">03</div>
+          <div class="step-icon">📄</div>
+          <h3>Export permit-ready docs</h3>
+          <p>Get a clean, standardized circuit diagram and a permit-ready PDF in one tap. Share it with the inspector, the GC, or the homeowner instantly.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOCKUP -->
+  <div class="mockup-section">
+    <div class="section-label">Sample Output</div>
+    <h2 style="margin-bottom: 16px;">What you get</h2>
+    <p class="section-intro">A clean, structured panel map auto-generated from a single photo. Every breaker labeled, every circuit identified.</p>
+
+    <div class="panel-mockup fade-up">
+      <div class="panel-grid">
+        <div class="breaker">
+          <span class="breaker-pos">MN</span>
+          <span class="breaker-amp amp-main">200A</span>
+          <span class="breaker-label">Main Breaker</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">01</span>
+          <span class="breaker-amp">20A</span>
+          <span class="breaker-label">Kitchen Outlets</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">02</span>
+          <span class="breaker-amp">20A</span>
+          <span class="breaker-label">Kitchen Outlets (2)</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">03</span>
+          <span class="breaker-amp">15A</span>
+          <span class="breaker-label">Master Bedroom Lights</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">04</span>
+          <span class="breaker-amp">15A</span>
+          <span class="breaker-label">Bedroom 2 / Hallway</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">05</span>
+          <span class="breaker-amp amp-double">40A</span>
+          <span class="breaker-label">Dryer (240V)</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">06</span>
+          <span class="breaker-amp amp-double">30A</span>
+          <span class="breaker-label">Water Heater</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">07</span>
+          <span class="breaker-amp">20A</span>
+          <span class="breaker-label">Bathroom GFCI</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">08</span>
+          <span class="breaker-amp">15A</span>
+          <span class="breaker-label">Living Room Outlets</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">09</span>
+          <span class="breaker-amp">20A</span>
+          <span class="breaker-label">Garage Outlets</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">10</span>
+          <span class="breaker-amp amp-double">50A</span>
+          <span class="breaker-label">EV Charger</span>
+          <span class="breaker-status"></span>
+        </div>
+        <div class="breaker">
+          <span class="breaker-pos">11</span>
+          <span class="breaker-amp">15A</span>
+          <span class="breaker-label">Basement Lights</span>
+          <span class="breaker-status"></span>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <div>
+          <p class="panel-meta">GENERATED: APR 21 2026 // CONFIDENCE: 97% // NEC 2023 COMPLIANT</p>
+        </div>
+        <a class="export-btn" href="#">⬇ Export PDF</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINAL CTA -->
+  <div class="cta-section">
+    <div class="cta-inner">
+      <div class="section-label" style="justify-content: center;">Early Access</div>
+      <h2>Stop documenting.<br><span style="color: var(--wire)">Start billing.</span></h2>
+      <p>Join the waitlist. The first 100 electricians get 3 months completely free. No credit card, no commitment.</p>
+
+      <div class="waitlist-wrap" style="margin: 0 auto;">
+        <div class="input-row">
+          <input type="email" id="email-input-2" placeholder="your@email.com" autocomplete="email" />
+          <button onclick="handleSignup2()">Join Waitlist</button>
+        </div>
+        <div class="success-msg" id="success-msg-2">
+          <span>✓</span> You're on the list. We'll be in touch soon.
+        </div>
+        <p class="waitlist-note">No spam. No credit card. Just early access.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="logo" style="font-size:1.1rem">Panel<span>Snap</span></div>
+    <p>Built for working electricians. &copy; 2026 PanelSnap.</p>
+    <a href="mailto:hello@panelsnap.com">hello@panelsnap.com</a>
+  </footer>
+
+  <script>
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          setTimeout(() => e.target.classList.add('visible'), i * 80);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+    // Waitlist handlers
+    function handleSignup() {
+      const email = document.getElementById('email-input').value;
+      if (!email || !email.includes('@')) {
+        document.getElementById('email-input').style.borderColor = 'var(--danger)';
+        return;
+      }
+      document.querySelector('.input-row').style.display = 'none';
+      document.getElementById('success-msg').style.display = 'flex';
+      // Replace this with your actual form endpoint (Formspree, Mailchimp, etc.)
+      fetch('https://formspree.io/f/mzdyjvnq', {
+        method: 'POST',
+        body: JSON.stringify({ email: email }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    function handleSignup2() {
+      const email = document.getElementById('email-input-2').value;
+      if (!email || !email.includes('@')) {
+        document.getElementById('email-input-2').style.borderColor = 'var(--danger)';
+        return;
+      }
+      document.querySelectorAll('.input-row')[1].style.display = 'none';
+      document.getElementById('success-msg-2').style.display = 'flex';
+      fetch('https://formspree.io/f/mzdyjvnq', {
+        method: 'POST',
+        body: JSON.stringify({ email: email }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  </script>
+</body>
+</html>
