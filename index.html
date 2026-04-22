@@ -675,9 +675,9 @@
         <button onclick="handleSignup()">Join Waitlist</button>
       </div>
       <div class="success-msg" id="success-msg">
-        <span>✓</span> You're on the list. First 100 get 3 months free.
+        <span>✓</span> You're on the list.
       </div>
-      <p class="waitlist-note">First <strong>100 electricians</strong> get 3 months free. No credit card required.</p>
+      <p class="waitlist-note">First <strong>100 electricians</strong> No credit card required.</p>
     </div>
   </div>
 
@@ -848,7 +848,7 @@
     <div class="cta-inner">
       <div class="section-label" style="justify-content: center;">Early Access</div>
       <h2>Stop documenting.<br><span style="color: var(--wire)">Start billing.</span></h2>
-      <p>Join the waitlist. The first 100 electricians get 3 months completely free. No credit card, no commitment.</p>
+      <p>Join the waitlist. No credit card, no commitment.</p>
 
       <div class="waitlist-wrap" style="margin: 0 auto;">
         <div class="input-row">
@@ -891,7 +891,6 @@
       }
       document.querySelector('.input-row').style.display = 'none';
       document.getElementById('success-msg').style.display = 'flex';
-      // Replace this with your actual form endpoint (Formspree, Mailchimp, etc.)
       fetch('https://formspree.io/f/mzdyjvnq', {
         method: 'POST',
         body: JSON.stringify({ email: email }),
